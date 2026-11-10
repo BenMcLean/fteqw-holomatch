@@ -4928,6 +4928,9 @@ void CL_ReadPacket(void)
 #ifdef Q3CLIENT
 		{
 			cactive_t newstate = q3->cl.ParseServerMessage(&net_message);
+			//the q3 plugin keeps its own netchan, so nothing else refreshes this timestamp.
+			//without it, CL_ReadPackets would drop every q3 connection cl_timeout seconds after it started.
+			cls.netchan.last_received = realtime;
 			if (newstate != cls.state)
 			{
 				cls.state = newstate;
