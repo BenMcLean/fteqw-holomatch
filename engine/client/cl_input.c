@@ -146,6 +146,9 @@ static kbutton_t	in_klook;
 static kbutton_t	in_left, in_right, in_forward, in_back;
 static kbutton_t	in_lookup, in_lookdown, in_moveleft, in_moveright;
 static kbutton_t	in_use, in_jump, in_attack;
+#ifdef HOLOMATCH
+static kbutton_t	in_altattack;	//Elite Force's secondary fire
+#endif
 static kbutton_t	in_rollleft, in_rollright, in_up, in_down;
 
 static kbutton_t	in_button[19+1];
@@ -993,6 +996,10 @@ static void IN_JumpUp (void)
 	KeyUp(&in_jump);
 }
 
+#ifdef HOLOMATCH
+static void IN_AltAttackDown(void) {KeyDown(&in_altattack, NULL);}
+static void IN_AltAttackUp(void) {KeyUp(&in_altattack);}
+#endif
 static void IN_ButtonNDown(void) {KeyDown(&in_button[atoi(Cmd_Argv(0)+7)], NULL);}
 static void IN_ButtonNUp(void) {KeyUp(&in_button[atoi(Cmd_Argv(0)+7)]);}
 
@@ -1210,6 +1217,11 @@ void CL_GatherButtons (usercmd_t *cmd, int pnum)
 		{
 			GATHERBIT(in_button[i],		i);
 		}
+#ifdef HOLOMATCH
+		//Elite Force: +altattack and +use are buttons 5 and 6 (same bits as +button5 and +button6)
+		GATHERBIT(in_altattack,		5);
+		GATHERBIT(in_use,			6);
+#endif
 //		bits |= 1<<1;	//rtcw talking
 //		bits |= 1<<4;	//rtcw walking
 //		bits |= 1<<7;	//rtcw any key
@@ -3302,6 +3314,10 @@ void CL_InitInput (void)
 	Cmd_AddCommand ("-attack",		IN_AttackUp);
 	Cmd_AddCommand ("+use",			IN_UseDown);
 	Cmd_AddCommand ("-use",			IN_UseUp);
+#ifdef HOLOMATCH
+	Cmd_AddCommand ("+altattack",	IN_AltAttackDown);
+	Cmd_AddCommand ("-altattack",	IN_AltAttackUp);
+#endif
 	Cmd_AddCommand ("+jump",		IN_JumpDown);
 	Cmd_AddCommand ("-jump",		IN_JumpUp);
 	Cmd_AddCommandD("impulse",		IN_Impulse, "Sends an impulse number to the server (read: weapon change).");

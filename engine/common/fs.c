@@ -73,6 +73,11 @@ static char *vidfilenames[] =	//list of filenames to check to see if graphics st
 #define Q3CFG "//schemes quake3\n" "set v_gammainverted 0\nset snd_ignorecueloops 1\nsetfl g_gametype 0 s\nset gl_clear 1\nset r_clearcolour 0 0 0\nset com_parseutf8 0\ngl_overbright "FORWEB("0","2")"\nseta model sarge\nseta headmodel sarge\nseta handicap 100\ncom_gamedirnativecode 1\nsv_port "STRINGIFY(PORT_Q3SERVER)"\ncl_defaultport "STRINGIFY(PORT_Q3SERVER)"\ncom_protocolversion 68\n"
 //#define RMQCFG "sv_bigcoords 1\n"
 
+#ifdef HOLOMATCH
+/*Star Trek Voyager: Elite Force Holomatch. Uses the q3 plugin (built with HOLOMATCH) and ioEF's protocol 26. Same default game port as q3, but its own master port (27953).*/
+#define HOLOCFG "//schemes quake3\n" "set v_gammainverted 0\nset snd_ignorecueloops 1\nset gl_clear 1\nset r_clearcolour 0 0 0\nset com_parseutf8 0\ngl_overbright "FORWEB("0","2")"\ncom_gamedirnativecode 1\nsv_port "STRINGIFY(PORT_Q3SERVER)"\ncl_defaultport "STRINGIFY(PORT_Q3SERVER)"\ncom_protocolversion 26\n"
+#endif
+
 #define HLCFG "plug_load ffmpeg\n"
 #define HL2CFG "plug_load ode;plug_load hl2\n"
 
@@ -188,6 +193,9 @@ static const gamemode_info_t gamemode_info[] = {
 #if defined(Q3CLIENT) || defined(Q3SERVER)
 	{"-quake3",		"q3",		"Quake3",				{"baseq3/pak0.pk3"},			Q3CFG,	{"baseq3",						"*fteq3"},	"Quake III Arena",					UPDATEURL(Q3),		"fteplug_quake3"},
 	{"-quake3demo",	"q3demo",	"Quake3Demo",			{"demoq3/pak0.pk3"},			Q3CFG,	{"demoq3",						"*fteq3"},	"Quake III Arena Demo",				NULL,				"fteplug_quake3"},
+#ifdef HOLOMATCH
+	{"-holomatch",	"holomatch","FTE-Holomatch",		{"baseef/pak0.pk3"},			HOLOCFG,{"baseef",						"*fteef"},	"Star Trek Voyager: Elite Force Holomatch",	NULL,			"fteplug_quake3"},
+#endif
 	//the rest are not supported in any real way. maps-only mostly, if that
 //	{"-quake4",		"q4",		"FTE-Quake4",			{"q4base/pak00.pk4"},			NULL,	{"q4base",						"*fteq4"},	"Quake 4"},
 //	{"-et",			NULL,		"FTE-EnemyTerritory",	{"etmain/pak0.pk3"},			NULL,	{"etmain",						"*fteet"},	"Wolfenstein - Enemy Territory"},

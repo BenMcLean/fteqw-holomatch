@@ -3462,8 +3462,13 @@ void SVC_DirectConnect(int expectedreliablesequence)
 
 		switch (atoi(Info_ValueForKey(userinfo, "protocol")))
 		{
+#ifdef HOLOMATCH
+		case 26:	//Elite Force (ioEF's protocol)
+			break;
+#else
 		case 68:	//regular q3 1.32
 			break;
+#endif
 //		case 43:	//q3 1.11 (most 'recent' demo)
 //			break;
 		default:

@@ -346,8 +346,50 @@ struct q3refEntity_s {
 	float		shaderTime;			// subtracted from refdef time to control effect start times
 
 	// extra sprite information
+#ifdef HOLOMATCH
+	//Elite Force: a union of per-type data.
+	union
+	{
+		struct
+		{
+			float rotation;
+			float radius;
+			qbyte vertRGBA[4][4];
+		} sprite;
+		struct
+		{
+			float width;
+			float width2;
+			float stscale;
+		} line;
+		struct
+		{
+			float width;
+			vec3_t control1;
+			vec3_t control2;
+		} bezier;
+		struct
+		{
+			float width;
+			float width2;
+			float stscale;
+			float height;
+			float bias;
+			qboolean wrap;
+		} cylinder;
+		struct
+		{
+			float width;
+			float deviation;
+			float stscale;
+			qboolean wrap;
+			qboolean taper;
+		} electricity;
+	} data;
+#else
 	float		radius;
 	float		rotation;
+#endif
 };
 
 struct q3polyvert_s
@@ -363,6 +405,17 @@ struct q3polyvert_s
 #define	Q3RF_DEPTHHACK			8		// for view weapon Z crunching
 #define Q3RF_NOSHADOW			64
 #define Q3RF_LIGHTING_ORIGIN	128
+
+#ifdef HOLOMATCH
+#include "efrender.h"
+#define Q3REF_TYPE(q3)		VQ3_EFTypeToEngine((q3)->reType)
+#define Q3REF_RADIUS(q3)	((q3)->data.sprite.radius)
+#define Q3REF_ROTATION(q3)	((q3)->data.sprite.rotation)
+#else
+#define Q3REF_TYPE(q3)		((q3)->reType)
+#define Q3REF_RADIUS(q3)	((q3)->radius)
+#define Q3REF_ROTATION(q3)	((q3)->rotation)
+#endif
 
 #define MAX_VMQ3_CACHED_STRINGS 2048
 static char *stringcache[MAX_VMQ3_CACHED_STRINGS];
@@ -416,6 +469,10 @@ int VMQ3_StringToHandle(char *str)
 void VQ3_AddEntity(const q3refEntity_t *q3)
 {
 	entity_t ent;
+#ifdef HOLOMATCH
+	if (VQ3_AddEntityEF(q3))
+		return;
+#endif
 	memset(&ent, 0, sizeof(ent));
 	ent.model = scenefuncs->ModelFromId(q3->hModel);
 	ent.framestate.g[FS_REG].frame[0] = q3->frame;
@@ -423,14 +480,14 @@ void VQ3_AddEntity(const q3refEntity_t *q3)
 	memcpy(ent.axis, q3->axis, sizeof(q3->axis));
 	ent.framestate.g[FS_REG].lerpweight[1] = q3->backlerp;
 	ent.framestate.g[FS_REG].lerpweight[0] = 1 - ent.framestate.g[FS_REG].lerpweight[1];
-	if (q3->reType == RT_SPRITE)
+	if (Q3REF_TYPE(q3) == RT_SPRITE)
 	{
-		ent.scale = q3->radius;
-		ent.rotation = q3->rotation;
+		ent.scale = Q3REF_RADIUS(q3);
+		ent.rotation = Q3REF_ROTATION(q3);
 	}
 	else
 		ent.scale = 1;
-	ent.rtype = q3->reType;
+	ent.rtype = Q3REF_TYPE(q3);
 
 	ent.customskin = q3->customSkin;
 	ent.skinnum = q3->skinNum;
@@ -455,6 +512,12 @@ void VQ3_AddEntity(const q3refEntity_t *q3)
 		ent.flags |= RF_EXTERNALMODEL;
 	if (q3->renderfx & Q3RF_NOSHADOW)
 		ent.flags |= RF_NOSHADOW;
+#ifdef HOLOMATCH
+	if (q3->renderfx & EFRF_FULLBRIGHT)
+		ent.flags |= RF_FULLBRIGHT;
+	if ((q3->renderfx & EFRF_FORCE_ENT_ALPHA) && q3->shaderRGBA[3] < 0xff)
+		ent.flags |= RF_TRANSLUCENT;	//ef overrides the shader's own alpha with the entity's, and blends. the engine's forced-transparency is the closest equivelent.
+#endif
 
 	ent.topcolour = TOP_DEFAULT;
 	ent.bottomcolour = BOTTOM_DEFAULT;
@@ -608,6 +671,15 @@ void VQ3_RenderView(const q3refdef_t *ref)
 		scene.flags |= RDF_NOWORLDMODEL;
 
 	scenefuncs->RenderScene(&scene, sizeof(ref->areamask), ref->areamask);
+#ifdef HOLOMATCH
+	if (!(ref->rdflags & 1/*Q3RDF_NOWORLDMODEL*/))
+	{	//remember where the camera was, for the camera-facing primitives.
+		VectorCopy(ref->vieworg, vq3_vieworg);
+		VectorCopy(ref->viewaxis[0], vq3_viewaxis[0]);
+		VectorCopy(ref->viewaxis[1], vq3_viewaxis[1]);
+		VectorCopy(ref->viewaxis[2], vq3_viewaxis[2]);
+	}
+#endif
 }
 
 static void *Little4Block(void *out, qbyte *in, size_t count)
@@ -860,9 +932,14 @@ static qintptr_t UI_SystemCalls(void *offset, quintptr_t mask, qintptr_t fn, con
 
 	switch((uiImport_t)fn)
 	{
-	case UI_CVAR_CREATE:						Con_Printf("Q3UI: Not implemented system trap: %s\n", "UI_CVAR_CREATE"); return 0;
+	case UI_CVAR_CREATE:	//make sure the cvar exists, with the given default.
+		if (arg[0] && arg[1])
+			VMQ3_Cvar_Register(NULL, VM_POINTER(arg[0]), VM_POINTER(arg[1]), VM_LONG(arg[2]));
+		return 0;
 	case UI_CVAR_INFOSTRINGBUFFER:				Con_Printf("Q3UI: Not implemented system trap: %s\n", "UI_CVAR_INFOSTRINGBUFFER"); return 0;
-	case UI_R_ADDPOLYTOSCENE:					Con_Printf("Q3UI: Not implemented system trap: %s\n", "UI_R_ADDPOLYTOSCENE"); return 0;
+	case UI_R_ADDPOLYTOSCENE:
+		VQ3_AddPolys(drawfuncs->ShaderFromId(arg[0]), VM_LONG(arg[1]), VM_POINTER(arg[2]), 1);
+		return 0;
 	case UI_R_REMAP_SHADER:						Con_Printf("Q3UI: Not implemented system trap: %s\n", "UI_R_REMAP_SHADER"); return 0;
 	case UI_UPDATESCREEN:						Con_Printf("Q3UI: Not implemented system trap: %s\n", "UI_UPDATESCREEN"); return 0;
 	case UI_CM_LOADMODEL:						Con_Printf("Q3UI: Not implemented system trap: %s\n", "UI_CM_LOADMODEL"); return 0;
@@ -1223,6 +1300,33 @@ static qintptr_t UI_SystemCalls(void *offset, quintptr_t mask, qintptr_t fn, con
 		Q_strncpyz(VM_POINTER(arg[1]), CG_GetConfigString(VM_LONG(arg[0])), VM_LONG(arg[2]));
 #endif
 		break;
+
+#ifdef HOLOMATCH
+	//Elite Force's server list queries. We only have a single combined list (local servers, master servers, favourites), so both 'sources' read from it.
+	case UI_LAN_GETLOCALSERVERCOUNT:
+	case UI_LAN_GETGLOBALSERVERCOUNT:
+		masterfuncs->CheckPollSockets();
+		VM_LONG(ret) = masterfuncs->TotalCount();
+		break;
+	case UI_LAN_GETLOCALSERVERADDRESSSTRING:
+	case UI_LAN_GETGLOBALSERVERADDRESSSTRING:
+		//void (int n, char *buf, int buflen)
+		if ((int)arg[1] + VM_LONG(arg[2]) >= mask || VM_POINTER(arg[1]) < offset || VM_LONG(arg[2]) <= 0)
+			break;	//out of bounds.
+		{
+			char *buf = VM_POINTER(arg[1]);
+			char adrbuf[MAX_ADR_SIZE];
+			serverinfo_t *info = masterfuncs->InfoForNum(VM_LONG(arg[0]));
+			*buf = 0;
+			if (info)
+			{
+				char *adr = masterfuncs->ServerToString(adrbuf, sizeof(adrbuf), info);
+				if (strlen(adr) < VM_LONG(arg[2]))
+					strcpy(buf, adr);
+			}
+		}
+		break;
+#endif
 
 #ifdef CL_MASTER
 	case UI_LAN_GETPINGQUEUECOUNT:	//these four are master server polling.
@@ -1765,8 +1869,16 @@ qboolean UI_KeyPress(struct menu_s *m, qboolean isdown, unsigned int devid, int 
 			break;
 	}
 
+#ifdef HOLOMATCH
+	//Elite Force's ui only wants key-down events, and its UI_KeyEvent has no 'down' argument.
+	if (!isdown)
+		return true;
+	if (key && key < 1024)
+		/*result = */vmfuncs->Call(uivm, UI_KEY_EVENT, key);
+#else
 	if (key && key < 1024)
 		/*result = */vmfuncs->Call(uivm, UI_KEY_EVENT, key, isdown);
+#endif
 	if (unicode && unicode < 1024)
 		/*result = */vmfuncs->Call(uivm, UI_KEY_EVENT, unicode|1024, isdown);
 	return true;

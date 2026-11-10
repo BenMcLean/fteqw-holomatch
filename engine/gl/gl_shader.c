@@ -3843,7 +3843,12 @@ static void Shaderpass_DepthFunc (parsestate_t *ps, const char **ptr)
 	token = Shader_ParseString (ptr);
 	if (!Q_stricmp (token, "equal"))
 		pass->shaderbits |= SBITS_DEPTHFUNC_EQUAL;
+#ifdef HOLOMATCH
+	else if (!Q_stricmp (token, "lequal") || !Q_stricmp (token, "disable"))	//Elite Force shaders use 'depthfunc disable' to mean the default.
+#else
 	else if (!Q_stricmp (token, "lequal"))
+#endif
+
 		pass->shaderbits |= SBITS_DEPTHFUNC_CLOSEREQUAL;	//default
 	else if (!Q_stricmp (token, "less"))
 		pass->shaderbits |= SBITS_DEPTHFUNC_CLOSER;

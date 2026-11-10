@@ -1348,8 +1348,14 @@ static void tcgen_environment(float *st, unsigned int numverts, float *xyz, floa
 		reflected[1] = normal[1]*2*d - viewer[1];
 		reflected[2] = normal[2]*2*d - viewer[2];
 
+#ifdef HOLOMATCH
+		//Elite Force uses a different environment-map projection.
+		st[0] = reflected[0] * 0.5;
+		st[1] = reflected[1] * 0.5;
+#else
 		st[0] = 0.5 + reflected[1] * 0.5;
 		st[1] = 0.5 - reflected[2] * 0.5;
+#endif
 	}
 }
 

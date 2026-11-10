@@ -21,7 +21,11 @@ typedef struct {
 #define	MAX_Q3_PERSISTANT			16
 #define	MAX_Q3_POWERUPS				16
 #define	MAX_Q3_WEAPONS				16		
+#ifdef HOLOMATCH
+#define	MAX_PS_EVENTS				4	//Elite Force
+#else
 #define	MAX_PS_EVENTS				2
+#endif
 typedef struct q3playerState_s {
 	int			commandTime;	// cmd->serverTime of last executed command
 	int			pm_type;
@@ -32,6 +36,11 @@ typedef struct q3playerState_s {
 	vec3_t		origin;
 	vec3_t		velocity;
 	int			weaponTime;
+#ifdef HOLOMATCH
+	int			rechargeTime;	// for the phaser
+	short		useTime;		// use debounce
+	int			introTime;		// for the holodoor
+#endif
 	int			gravity;
 	int			speed;
 	int			delta_angles[3];	// add to command angles to get view direction
@@ -50,7 +59,9 @@ typedef struct q3playerState_s {
 								// when at rest, the value will remain unchanged
 								// used to twist the legs during strafing
 
+#ifndef HOLOMATCH
 	vec3_t		grapplePoint;	// location of grapple to pull towards if PMF_GRAPPLE_PULL
+#endif
 
 	int			eFlags;			// copied to entityState_t->eFlags
 
@@ -74,18 +85,25 @@ typedef struct q3playerState_s {
 	int			damageYaw;
 	int			damagePitch;
 	int			damageCount;
+#ifdef HOLOMATCH
+	int			damageShieldCount;
+#endif
 
 	int			stats[MAX_Q3_STATS];
 	int			persistant[MAX_Q3_PERSISTANT];	// stats that aren't cleared on death
 	int			powerups[MAX_Q3_POWERUPS];	// level.time that the powerup runs out
 	int			ammo[MAX_Q3_WEAPONS];
+#ifndef HOLOMATCH
 	int			generic1;
 	int			loopSound;
 	int			jumppad_ent;	// jumppad entity hit this frame
+#endif
 	// not communicated over the net at all
 	int			ping;			// server to game info for scoreboard
+#ifndef HOLOMATCH
 	int			pmove_framecount;	// FIXME: don't transmit over the network
 	int			jumppad_frame;
+#endif
 	int			entityEventSequence;
 
 } q3playerState_t;
@@ -149,7 +167,9 @@ typedef struct q3entityState_s {
 	int		legsAnim;		// mask off ANIM_TOGGLEBIT
 	int		torsoAnim;		// mask off ANIM_TOGGLEBIT
 
+#ifndef HOLOMATCH
 	int		generic1;
+#endif
 
 } q3entityState_t;
 
@@ -200,6 +220,15 @@ typedef struct frame_s {
 	int		serverTime;
 } q3frame_t;
 
+#ifdef HOLOMATCH
+typedef struct {
+	int				serverTime;
+	qbyte			buttons;
+	qbyte			weapon;
+	int				angles[3];
+	signed char	forwardmove, rightmove, upmove;
+} q3usercmd_t;
+#else
 typedef struct {
 	int				serverTime;
 	int				angles[3];
@@ -207,6 +236,7 @@ typedef struct {
 	qbyte			weapon;           // weapon
 	signed char	forwardmove, rightmove, upmove;
 } q3usercmd_t;
+#endif
 #define Q3CMD_BACKUP 64		//number of q3usercmd_ts that the client can queue before acks
 #define Q3CMD_MASK	 (Q3CMD_BACKUP-1)
 
@@ -335,7 +365,11 @@ typedef struct {
 	char		renderer_string[MAX_STRING_CHARS];
 	char		vendor_string[MAX_STRING_CHARS];
 	char		version_string[MAX_STRING_CHARS];
+#ifdef HOLOMATCH	//Elite Force's glconfig is smaller, and has an extra field.
+	char		extensions_string[2048];
+#else
 	char		extensions_string[8192];
+#endif
 
 	int			maxTextureSize;         // queried from GL
 	int			numTextureUnits;        // multitexture ability
@@ -348,6 +382,9 @@ typedef struct {
 	qboolean	deviceSupportsGamma;
 	int			textureCompression;	//textureCompression_t
 	qboolean	textureEnvAddAvailable;
+#ifdef HOLOMATCH
+	qboolean	textureFilterAnisotropicAvailable;
+#endif
 
 	int			vidWidth, vidHeight;
 	float		windowAspect;

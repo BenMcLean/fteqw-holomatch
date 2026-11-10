@@ -11,6 +11,9 @@ int VMQ3_StringToHandle(char *str);
 void VMQ3_FlushStringHandles(void);
 
 //#define Q3_NOENCRYPT	//a debugging property, makes it incompatible with q3
+#ifdef HOLOMATCH
+#define Q3_NOENCRYPT	//Elite Force (protocol 26) does not use the legacy q3 packet obfuscation.
+#endif
 
 #ifdef HAVE_CLIENT
 extern plug2dfuncs_t	*drawfuncs;

@@ -33,9 +33,17 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // TTimo
 // https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=551
+#ifdef HOLOMATCH
+#define SVF_SHIELD_BBOX			0x00000002
+#define SVF_CLIENTMASK			0x00000004
+#else
 #define SVF_CLIENTMASK 0x00000002
+#endif
 
 #define SVF_BOT					0x00000008	// set if the entity is a bot
+#ifdef HOLOMATCH
+#define SVF_ELIMINATED			0x00000010
+#endif
 #define	SVF_BROADCAST			0x00000020	// send to all connected clients
 #define	SVF_PORTAL				0x00000040	// merge a second pvs at origin2 into snapshots
 #define	SVF_USE_CURRENT_ORIGIN	0x00000080	// entity->r.currentOrigin instead of entity->s.origin
@@ -54,7 +62,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 typedef struct {
+#ifndef HOLOMATCH	//Elite Force has no leading entityState here
 	q3entityState_t	s;				// communicated by server to clients
+#endif
 
 	qboolean	linked;				// qfalse if not in any good cluster
 	int			linkcount;

@@ -50,6 +50,10 @@ botlib_export_t *botlib;
 
 #include "clq3defs.h"
 #include "q3g_public.h"
+#ifdef HOLOMATCH
+#include "efbotlib.h"
+static void QDECL BL_BotClientCommand(int clientnum, char *command);
+#endif
 
 #define svs (*sv3.server_state_static)
 #define sv (*sv3.server_state)
@@ -113,9 +117,17 @@ static const char *mapentspointer;
 
 // TTimo
 // https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=551
+#ifdef HOLOMATCH
+#define SVF_SHIELD_BBOX			0x00000002
+#define SVF_CLIENTMASK			0x00000004
+#else
 #define SVF_CLIENTMASK 0x00000002
+#endif
 
 #define SVF_BOT					0x00000008	// set if the entity is a bot
+#ifdef HOLOMATCH
+#define SVF_ELIMINATED			0x00000010
+#endif
 #define	SVF_BROADCAST			0x00000020	// send to all connected clients
 #define	SVF_PORTAL				0x00000040	// merge a second pvs at origin2 into snapshots
 #define	SVF_USE_CURRENT_ORIGIN	0x00000080	// entity->r.currentOrigin instead of entity->s.origin
@@ -839,6 +851,57 @@ static qboolean SV_InPVS(vec3_t p1, vec3_t p2)
 static qintptr_t Q3G_SystemCalls(void *offset, quintptr_t mask, qintptr_t fn, const qintptr_t *arg)
 {
 	int ret = 0;
+#ifdef HOLOMATCH
+	//Elite Force's botlib trap numbering differs from q3's (different EA_* and AAS blocks).
+	//Translate it to the q3 numbering, and deal with the EF-only traps and changed signatures.
+	if (fn >= 200 && fn < 600)
+	{
+		int efbotfn = (int)fn;
+		fn = EF_BotlibToQ3(efbotfn);
+		if (fn < 0)
+		{
+			if (botlib)
+			{
+				switch(efbotfn)
+				{
+				case 400+2:	//BOTLIB_EA_USE_ITEM
+					BL_BotClientCommand(VM_LONG(arg[0]), va("use %s", (char*)VM_POINTER(arg[1])));
+					break;
+				case 400+3:	//BOTLIB_EA_DROP_ITEM
+					BL_BotClientCommand(VM_LONG(arg[0]), va("drop %s", (char*)VM_POINTER(arg[1])));
+					break;
+				case 400+4:	//BOTLIB_EA_USE_INV
+					BL_BotClientCommand(VM_LONG(arg[0]), va("invuse %s", (char*)VM_POINTER(arg[1])));
+					break;
+				case 400+5:	//BOTLIB_EA_DROP_INV
+					BL_BotClientCommand(VM_LONG(arg[0]), va("invdrop %s", (char*)VM_POINTER(arg[1])));
+					break;
+				case 400+27:	//BOTLIB_EA_ALT_ATTACK
+					botlib->ea.EA_AltAttack(VM_LONG(arg[0]));
+					break;
+				default:	//BOTLIB_AAS_ENTITY_VISIBLE etc. were never really implemented. 'not visible/no results' is a safe answer.
+					break;
+				}
+			}
+			return 0;
+		}
+		//EF's BotLoadCharacter takes an integer skill, rather than a float.
+		if (fn == BOTLIB_AI_LOAD_CHARACTER && botlib)
+			return botlib->ai.BotLoadCharacter(VM_POINTER(arg[0]), (float)VM_LONG(arg[1]));
+		//and BotSetChatName has no client argument (the speaker is given to BotEnterChat instead).
+		if (fn == BOTLIB_AI_SET_CHAT_NAME && botlib)
+		{
+			botlib->ai.BotSetChatName(arg[0], VM_POINTER(arg[1]), 0);
+			return 0;
+		}
+	}
+#endif
+#ifdef USEBOTLIB
+	//the gamecode may call the botlib traps even when bots are disabled (bot_enable 0) or the library failed to start.
+	//every trap below dereferences 'botlib', so answer 'nothing/failed' instead of calling through a null pointer.
+	if (!botlib && fn >= BOTLIB_SETUP && fn <= BOTLIB_AI_GENETIC_PARENTS_AND_CHILD_SELECTION)
+		return 0;
+#endif
 	switch((q3ggameImport_t)fn)
 	{
 	case G_PRINT:		// ( const char *string );
@@ -1947,6 +2010,9 @@ qboolean SVQ3_InitGame(server_static_t *server_state_static, server_t *server_st
 
 		cvarfuncs->GetString("sv_pure", buffer, sizeof(buffer));
 		worldfuncs->SetInfoKey(sysinfo, "sv_pure", buffer, MAX_SERVERINFO_STRING);
+#ifdef HOLOMATCH	//Elite Force clients read the server framerate from the systeminfo.
+		worldfuncs->SetInfoKey(sysinfo, "sv_fps", "20", MAX_SERVERINFO_STRING);
+#endif
 		SVQ3_SetConfigString(1, sysinfo);
 		q3_serverinfo_dirty = true;
 	}
@@ -2562,8 +2628,10 @@ static void SVQ3Q1_ConvertEntStateQ1ToQ3(entity_state_t *q1, q3entityState_t *q3
 	q3->powerups = q1->effects;
 	q3->modelindex = q1->modelindex;
 	q3->otherEntityNum2 = 0;
+#ifndef HOLOMATCH
 	q3->loopSound = 0;
 	q3->generic1 = q1->trans;
+#endif
 	q3->origin2[2] = 0;//q1->old_origin[2];
 	q3->origin2[0] = 0;//q1->old_origin[0];
 	q3->origin2[1] = 0;//q1->old_origin[1];
@@ -2624,6 +2692,9 @@ static void SVQ3Q1_SendGamestateConfigstrings(sizebuf_t *msg)
 
 	str = "qwoverq3";
 	Info_SetValueForKey(sysinfo, "fs_game", str, sizeof(sysinfo));
+#ifdef HOLOMATCH
+	Info_SetValueForKey(sysinfo, "sv_fps", "20", sizeof(sysinfo));
+#endif
 
 	cfgstr[0] = svs.info;
 	cfgstr[1] = sysinfo;

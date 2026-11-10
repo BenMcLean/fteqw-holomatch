@@ -4928,6 +4928,9 @@ void CL_ReadPacket(void)
 #ifdef Q3CLIENT
 		{
 			cactive_t newstate = q3->cl.ParseServerMessage(&net_message);
+			//the q3 plugin keeps its own netchan, so nothing else refreshes this timestamp.
+			//without it, CL_ReadPackets would drop every q3 connection cl_timeout seconds after it started.
+			cls.netchan.last_received = realtime;
 			if (newstate != cls.state)
 			{
 				cls.state = newstate;
@@ -7717,6 +7720,11 @@ void CL_ExecInitialConfigs(char *resetcommand, qboolean fullvidrestart)
 		int q3cfg = COM_FDepthFile ("q3config.cfg", true);
 	//	Cbuf_AddText ("bind ` toggleconsole\n", RESTRICT_LOCAL);	//in case default.cfg does not exist. :(
 		Cbuf_AddText ("exec default.cfg\n", RESTRICT_LOCAL);
+#ifdef HOLOMATCH
+		if (COM_FDepthFile ("hmconfig.cfg", true) <= def && COM_FDepthFile ("hmconfig.cfg", true)!=FDEPTH_MISSING)	//Elite Force Holomatch's own config name
+			Cbuf_AddText ("exec hmconfig.cfg\n", RESTRICT_LOCAL);
+		else
+#endif
 		if (q3cfg <= def && q3cfg!=FDEPTH_MISSING)
 			Cbuf_AddText ("exec q3config.cfg\n", RESTRICT_LOCAL);
 		else //if (cfg <= def && cfg!=0x7fffffff)

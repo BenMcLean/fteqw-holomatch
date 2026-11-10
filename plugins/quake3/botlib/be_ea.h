@@ -45,6 +45,9 @@ void EA_MoveBack(int client);
 void EA_MoveLeft(int client);
 void EA_MoveRight(int client);
 void EA_Attack(int client);
+#ifdef HOLOMATCH
+void EA_AltAttack(int client);
+#endif
 void EA_Respawn(int client);
 void EA_Talk(int client);
 void EA_Gesture(int client);

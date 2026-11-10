@@ -794,6 +794,61 @@ typedef struct {
 //
 // entityState_t
 //
+#ifdef HOLOMATCH
+//Elite Force (protocol 26) field order. Same delta encoding as Q3, different table.
+static const q3field_t esFieldTable[] = {
+	ES_FIELD( eType,				 8 ),
+	ES_FIELD( eFlags,				24 ),
+	ES_FIELD( pos.trType,			 8 ),
+	ES_FIELD( pos.trTime,			32 ),
+	ES_FIELD( pos.trDuration,		32 ),
+	ES_FIELD( pos.trBase[0],		 0 ),
+	ES_FIELD( pos.trBase[1],		 0 ),
+	ES_FIELD( pos.trBase[2],		 0 ),
+	ES_FIELD( pos.trDelta[0],		 0 ),
+	ES_FIELD( pos.trDelta[1],		 0 ),
+	ES_FIELD( pos.trDelta[2],		 0 ),
+	ES_FIELD( apos.trType,			 8 ),
+	ES_FIELD( apos.trTime,			32 ),
+	ES_FIELD( apos.trDuration,		32 ),
+	ES_FIELD( apos.trBase[0],		 0 ),
+	ES_FIELD( apos.trBase[1],		 0 ),
+	ES_FIELD( apos.trBase[2],		 0 ),
+	ES_FIELD( apos.trDelta[0],		 0 ),
+	ES_FIELD( apos.trDelta[1],		 0 ),
+	ES_FIELD( apos.trDelta[2],		 0 ),
+	ES_FIELD( time,					32 ),
+	ES_FIELD( time2,				32 ),
+	ES_FIELD( origin[0],			 0 ),
+	ES_FIELD( origin[1],			 0 ),
+	ES_FIELD( origin[2],			 0 ),
+	ES_FIELD( origin2[0],			 0 ),
+	ES_FIELD( origin2[1],			 0 ),
+	ES_FIELD( origin2[2],			 0 ),
+	ES_FIELD( angles[0],			 0 ),
+	ES_FIELD( angles[1],			 0 ),
+	ES_FIELD( angles[2],			 0 ),
+	ES_FIELD( angles2[0],			 0 ),
+	ES_FIELD( angles2[1],			 0 ),
+	ES_FIELD( angles2[2],			 0 ),
+	ES_FIELD( otherEntityNum,		10 ),
+	ES_FIELD( otherEntityNum2,		10 ),
+	ES_FIELD( groundEntityNum,		10 ),
+	ES_FIELD( loopSound,			16 ),
+	ES_FIELD( constantLight,		32 ),
+	ES_FIELD( modelindex,			MODELINDEX_BITS ),
+	ES_FIELD( modelindex2,			MODELINDEX_BITS ),
+	ES_FIELD( frame,				16 ),
+	ES_FIELD( clientNum,			 8 ),
+	ES_FIELD( solid,				24 ),
+	ES_FIELD( event,				10 ),
+	ES_FIELD( eventParm,			 8 ),
+	ES_FIELD( powerups,				16 ),
+	ES_FIELD( weapon,				 8 ),
+	ES_FIELD( legsAnim,				 8 ),
+	ES_FIELD( torsoAnim,			 8 ),
+};
+#else
 static const q3field_t esFieldTable[] = {
 	ES_FIELD( pos.trTime,			32 ),
 	ES_FIELD( pos.trBase[0],		 0 ),
@@ -848,6 +903,7 @@ static const q3field_t esFieldTable[] = {
 	ES_FIELD( frame,				16 )
 };
 
+#endif
 static const int esTableSize = sizeof( esFieldTable ) / sizeof( esFieldTable[0] );
 
 q3entityState_t nullEntityState;
@@ -1139,6 +1195,58 @@ void MSGQ3_WriteDeltaEntity(sizebuf_t *msg, const q3entityState_t *from, const q
 //
 // playerState_t
 //
+#ifdef HOLOMATCH
+static const q3field_t psFieldTable[] = {
+	PS_FIELD( commandTime,			32 ),
+	PS_FIELD( pm_type,				 8 ),
+	PS_FIELD( bobCycle,				 8 ),
+	PS_FIELD( pm_flags,				16 ),
+	PS_FIELD( pm_time,			   -16 ),
+	PS_FIELD( origin[0],			 0 ),
+	PS_FIELD( origin[1],			 0 ),
+	PS_FIELD( origin[2],			 0 ),
+	PS_FIELD( velocity[0],			 0 ),
+	PS_FIELD( velocity[1],			 0 ),
+	PS_FIELD( velocity[2],			 0 ),
+	PS_FIELD( weaponTime,		   -16 ),
+	PS_FIELD( gravity,				16 ),
+	PS_FIELD( speed,				16 ),
+	PS_FIELD( delta_angles[0],		16 ),
+	PS_FIELD( delta_angles[1],		16 ),
+	PS_FIELD( delta_angles[2],		16 ),
+	PS_FIELD( groundEntityNum,		10 ),
+	PS_FIELD( legsTimer,			 8 ),
+	PS_FIELD( torsoTimer,			12 ),
+	PS_FIELD( legsAnim,				 8 ),
+	PS_FIELD( torsoAnim,			 8 ),
+	PS_FIELD( movementDir,			 4 ),
+	PS_FIELD( eFlags,				16 ),
+	PS_FIELD( eventSequence,		16 ),
+	PS_FIELD( events[0],			 8 ),
+	PS_FIELD( events[1],			 8 ),
+	PS_FIELD( events[2],			 8 ),
+	PS_FIELD( events[3],			 8 ),
+	PS_FIELD( eventParms[0],		 8 ),
+	PS_FIELD( eventParms[1],		 8 ),
+	PS_FIELD( eventParms[2],		 8 ),
+	PS_FIELD( eventParms[3],		 8 ),
+	PS_FIELD( externalEvent,		10 ),
+	PS_FIELD( externalEventParm,	 8 ),
+	PS_FIELD( clientNum,			 8 ),
+	PS_FIELD( weapon,				 5 ),
+	PS_FIELD( weaponstate,			 4 ),
+	PS_FIELD( viewangles[0],		 0 ),
+	PS_FIELD( viewangles[1],		 0 ),
+	PS_FIELD( viewangles[2],		 0 ),
+	PS_FIELD( viewheight,			-8 ),
+	PS_FIELD( damageEvent,			 8 ),
+	PS_FIELD( damageYaw,			 8 ),
+	PS_FIELD( damagePitch,			 8 ),
+	PS_FIELD( damageCount,			 8 ),
+	PS_FIELD( damageShieldCount,	 8 ),
+	PS_FIELD( introTime,			32 ),
+};
+#else
 static const q3field_t psFieldTable[] = {
 	PS_FIELD( commandTime,			32 ),
 	PS_FIELD( origin[0],			 0 ),
@@ -1189,6 +1297,7 @@ static const q3field_t psFieldTable[] = {
 	PS_FIELD( jumppad_ent,			10 ),
 	PS_FIELD( loopSound,			16 )
 };
+#endif
 static const int psTableSize = sizeof( psFieldTable ) / sizeof( psFieldTable[0] );
 q3playerState_t nullPlayerState;
 
@@ -1596,6 +1705,22 @@ void MSG_Q3_ReadDeltaUsercmd(int key, const usercmd_t *from, usercmd_t *to)
 	else
 		to->servertime = msgfuncs->ReadBits(32);
 	to->msec = 0;	//first of a packet should always be an absolute value, which makes the old value awkward.
+
+#ifdef HOLOMATCH
+	//Elite Force: no checksum key, no 'nothing changed' bit, 8-bit buttons. Every field is its own changed-bit + value.
+	to->angles[0]	= MSG_ReadDeltaKey(0, from->angles[0],	16);
+	to->angles[1]	= MSG_ReadDeltaKey(0, from->angles[1],	16);
+	to->angles[2]	= MSG_ReadDeltaKey(0, from->angles[2],	16);
+	to->forwardmove	= (signed char)(unsigned char)MSG_ReadDeltaKey(0, (unsigned char)(signed char)from->forwardmove,	8);
+	to->sidemove	= (signed char)(unsigned char)MSG_ReadDeltaKey(0, (unsigned char)(signed char)from->sidemove,		8);
+	to->upmove		= (signed char)(unsigned char)MSG_ReadDeltaKey(0, (unsigned char)(signed char)from->upmove,			8);
+	if (to->forwardmove == -128)	to->forwardmove = -127;
+	if (to->sidemove == -128)		to->sidemove = -127;
+	if (to->upmove == -128)			to->upmove = -127;
+	to->buttons		= MSG_ReadDeltaKey(0, from->buttons,	8);
+	to->weapon		= MSG_ReadDeltaKey(0, from->weapon,		8);
+	return;
+#endif
 
 	if (!msgfuncs->ReadBits(1))
 	{

@@ -81,6 +81,9 @@ struct weaponinfo_s;
 //action flags
 #define ACTION_ATTACK			0x00000001
 #define ACTION_USE			0x00000002
+#ifdef HOLOMATCH
+#define ACTION_ALTATTACK		0x00000004	//Elite Force's secondary fire
+#endif
 #define ACTION_RESPAWN			0x00000008
 #define ACTION_JUMP			0x00000010
 #define ACTION_MOVEUP			0x00000020
@@ -278,6 +281,9 @@ typedef struct ea_export_s
 	void	(*EA_Gesture)(int client);
 	void	(*EA_Talk)(int client);
 	void	(*EA_Attack)(int client);
+#ifdef HOLOMATCH
+	void	(*EA_AltAttack)(int client);
+#endif
 	void	(*EA_Use)(int client);
 	void	(*EA_Respawn)(int client);
 	void	(*EA_MoveUp)(int client);

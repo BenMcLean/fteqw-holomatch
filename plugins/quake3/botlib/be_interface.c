@@ -56,7 +56,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 botlib_globals_t botlibglobals;
 
 botlib_export_t be_botlib_export;
-botlib_import_t botimport;
+//the library prints from many places. Never let that be a call through a null pointer, even if something gets called before GetBotLibAPI.
+static void QDECL BotImport_DefaultPrint(int type, char *fmt, ...)
+{
+}
+botlib_import_t botimport = {BotImport_DefaultPrint};
 //
 int botDeveloper;
 //qtrue if the library is setup
@@ -740,6 +744,9 @@ static void Init_EA_Export( ea_export_t *ea ) {
 	ea->EA_Gesture = EA_Gesture;
 	ea->EA_Talk = EA_Talk;
 	ea->EA_Attack = EA_Attack;
+#ifdef HOLOMATCH
+	ea->EA_AltAttack = EA_AltAttack;
+#endif
 	ea->EA_Use = EA_Use;
 	ea->EA_Respawn = EA_Respawn;
 	ea->EA_Crouch = EA_Crouch;

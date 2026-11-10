@@ -6447,6 +6447,9 @@ static qboolean QDECL Mod_LoadQ3Model(model_t *mod, void *buffer, size_t fsize)
 
 	return true;
 }
+#ifdef HOLOMATCH
+#include "com_mdr.inc"	//Elite Force's skeletal player models.
+#endif
 #endif
 
 
@@ -10330,6 +10333,9 @@ void Alias_Register(void)
 #endif
 #ifdef MD3MODELS
 	Mod_RegisterModelFormatMagic(NULL, "Quake3 Model (md3)",				MD3_IDENT,								Mod_LoadQ3Model);
+#ifdef HOLOMATCH
+	Mod_RegisterModelFormatMagic(NULL, "Raven Model (mdr)",					"RDM5",4,								Mod_LoadMDR);
+#endif
 #endif
 #ifdef HALFLIFEMODELS
 	Mod_RegisterModelFormatMagic(NULL, "Half-Life Model (mdl)",				"IDST\x0a\0\0\0",8,						Mod_LoadHLModel);

@@ -4,6 +4,11 @@ clientside master queries and server ping/polls
 */
 
 #include "quakedef.h"
+#ifdef HOLOMATCH
+#define Q3MASTERPROTOCOL 26	//Elite Force
+#else
+#define Q3MASTERPROTOCOL 68
+#endif
 #include "cl_master.h"
 #include "netinc.h"
 
@@ -200,6 +205,10 @@ static net_masterlist_t net_masterlist[] = {
 	{MP_QUAKE3,		CVARFC("net_q3masterextra4",	"master.huxxer.de:27950",						CVAR_NOSAVE, Net_Masterlist_Callback),	"DE: BMA Team"},
 	{MP_QUAKE3,		CVARFC("net_q3masterextra5",	"master.maverickservers.com:27950",				CVAR_NOSAVE, Net_Masterlist_Callback),	"US: Maverickservers.com"},
 	{MP_QUAKE3,		CVARFC("net_q3masterextra8",	"master3.idsoftware.com:27950",					CVAR_NOSAVE, Net_Masterlist_Callback),	"US: id Software Quake III Master"},
+#ifdef HOLOMATCH
+	{MP_QUAKE3,		CVARFC("net_q3masterextra9",	"master.stef1.ravensoft.com:27953",				CVAR_NOSAVE, Net_Masterlist_Callback),	"Official Elite Force master server"},
+	{MP_QUAKE3,		CVARFC("net_q3masterextra10",	"efmaster.tjps.eu:27953",						CVAR_NOSAVE, Net_Masterlist_Callback),	"Elite Force: tjps.eu"},
+#endif
 #endif
 #endif
 #endif
@@ -340,6 +349,15 @@ static void SV_Master_SingleHeartbeat(net_masterlist_t *master)
 							Q_strncatz(q2users, va("%i %i \"%s\"\n", svs.clients[i].old_frags, SV_CalcPing(&svs.clients[i], false), svs.clients[i].name), sizeof(q2users));
 					}
 					e = NET_SendPacket (svs.sockets, strlen(str), va(str, info, q2users), na);
+				}
+				break;
+#endif
+#ifdef HOLOMATCH
+			case MP_QUAKE3:	//Elite Force masters want to be told the game name (STEF1).
+				if (svs.gametype == GT_QUAKE3)
+				{
+					char *str = "\377\377\377\377""heartbeat STEF1\n";
+					e = NET_SendPacket (svs.sockets, strlen(str), str, na);
 				}
 				break;
 #endif
@@ -2907,9 +2925,9 @@ static void MasterInfo_Request(master_t *mast)
 			{
 				char *str;
 				if (mast->adr.type == NA_IPV6)
-					str = va("%c%c%c%cgetserversExt %u empty full ipv6\n", 255, 255, 255, 255, 68);
+					str = va("%c%c%c%cgetserversExt %u empty full ipv6\n", 255, 255, 255, 255, Q3MASTERPROTOCOL);
 				else
-					str = va("%c%c%c%cgetservers %u empty full\n", 255, 255, 255, 255, 68);
+					str = va("%c%c%c%cgetservers %u empty full\n", 255, 255, 255, 255, Q3MASTERPROTOCOL);
 				NET_SendPollPacket (strlen(str), str, mast->adr);
 			}
 			break;
@@ -3841,6 +3859,34 @@ void CL_MasterListParse(netadrtype_t adrtype, int type, qboolean slashpad)
 
 		info = Z_Malloc(sizeof(serverinfo_t));
 		info->adr.type = adrtype;
+#ifdef HOLOMATCH
+		//Elite Force's master encodes each ipv4 address+port as 12 hex digits instead of 6 raw bytes. detect that format.
+		if (adrtype == NA_IP && slashpad && ((net_message.currentbit>>3)+12 <= net_message.cursize))
+		{
+			const qbyte *hex = net_message.data + (net_message.currentbit>>3);
+			for (i = 0; i < 12; i++)
+				if (!((hex[i] >= '0' && hex[i] <= '9') || (hex[i] >= 'a' && hex[i] <= 'f') || (hex[i] >= 'A' && hex[i] <= 'F')))
+					break;
+			if (i == 12 && ((net_message.currentbit>>3)+12 == net_message.cursize || hex[12] == '\\' || hex[12] == '/'))
+			{
+				int b[6];
+				for (i = 0; i < 6; i++)
+				{
+					char digits[3];
+					digits[0] = MSG_ReadByte();
+					digits[1] = MSG_ReadByte();
+					digits[2] = 0;
+					b[i] = strtoul(digits, NULL, 16);
+				}
+				for (i = 0; i < 4; i++)
+					((qbyte *)&info->adr.address)[i] = b[i];
+				info->ping = PING_DEAD;
+				p1 = b[4];
+				p2 = b[5];
+				goto gotaddress;
+			}
+		}
+#endif
 		switch(adrtype)
 		{
 		case NA_IP:
@@ -3857,6 +3903,9 @@ void CL_MasterListParse(netadrtype_t adrtype, int type, qboolean slashpad)
 
 		p1 = MSG_ReadByte();
 		p2 = MSG_ReadByte();
+#ifdef HOLOMATCH
+gotaddress:
+#endif
 		info->adr.port = htons((unsigned short)((p1<<8)|p2));
 		if (!info->adr.port)
 		{

@@ -2813,9 +2813,16 @@ int BotChatLength(int chatstate)
 void BotEnterChat(int chatstate, int clientto, int sendto)
 {
 	bot_chatstate_t *cs;
+	int clientnum;
 
 	cs = BotChatStateFromHandle(chatstate);
 	if (!cs) return;
+
+#ifdef HOLOMATCH	//Elite Force's BotSetChatName has no client argument, so the speaker is passed here instead.
+	clientnum = clientto;
+#else
+	clientnum = cs->client;
+#endif
 
 	if (strlen(cs->chatmessage))
 	{
@@ -2826,13 +2833,13 @@ void BotEnterChat(int chatstate, int clientto, int sendto)
 		else {
 			switch(sendto) {
 				case CHAT_TEAM:
-					EA_Command(cs->client, va("say_team %s", cs->chatmessage));
+					EA_Command(clientnum, va("say_team %s", cs->chatmessage));
 					break;
 				case CHAT_TELL:
-					EA_Command(cs->client, va("tell %d %s", clientto, cs->chatmessage));
+					EA_Command(clientnum, va("tell %d %s", clientto, cs->chatmessage));
 					break;
 				default: //CHAT_ALL
-					EA_Command(cs->client, va("say %s", cs->chatmessage));
+					EA_Command(clientnum, va("say %s", cs->chatmessage));
 					break;
 			}
 		}

@@ -1060,6 +1060,21 @@ static void S_LoadSoundWorker (void *ctx, void *ctxdata, size_t forcedecode, siz
 			return;
 		}
 
+#ifdef HOLOMATCH
+		{	//Elite Force: when playing in german, voice samples come from sound/vox_d instead of sound/voice.
+			const char *n = name;
+			if (!strncmp(n, "sound/", 6))
+				n += 6;
+			if (!strncmp(n, "voice", 5) && !Q_strcasecmp(Cvar_VariableString("s_language"), "DEUTSCH"))
+			{
+				Q_snprintfz(namebuffer, sizeof(namebuffer), "sound/%s", n);
+				namebuffer[8] = 'x';
+				namebuffer[9] = '_';
+				namebuffer[10] = 'd';
+				data = FS_LoadMallocFile(namebuffer, &filesize);
+			}
+		}
+#endif
 		for (pre = 0; !data && pre < countof(prefixes); pre++)
 		{
 			if (name[0] == '.' && name[1] == '.' && name[2] == '/')

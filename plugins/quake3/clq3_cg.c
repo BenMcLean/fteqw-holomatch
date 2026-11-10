@@ -71,6 +71,12 @@ typedef enum {
 	CG_SETUSERCMDVALUE,
 	CG_R_REGISTERSHADERNOMIP,
 	CG_MEMORY_REMAINING,
+#ifdef HOLOMATCH
+	//Elite Force adds these two straight after MEMORY_REMAINING (59 and 60).
+	//The q3 traps that follow are renumbered out of the way, EF's cgame never uses them.
+	CG_R_REGISTERSHADER3D,			//59
+	CG_CVAR_SET_NO_MODIFY,			//60
+#endif
 	CG_R_REGISTERFONT,
 	CG_KEY_ISDOWN,					//60
 	CG_KEY_GETCATCHER,
@@ -376,7 +382,20 @@ qboolean CG_GetServerCommand(int cmdnum)
 	else if (!strcmp(arg0, "map_restart"))
 		clientfuncs->ClearNotify();
 	else if (!strcmp(arg0, "disconnect"))
+	{
+#ifdef HOLOMATCH
+		//Elite Force's ui shows the reason via its err_dialog menu.
+		char reason[256], *c;
+		Q_strncpyz(reason, (cmdfuncs->Argc()>1)?cmdfuncs->Argv(1, NULL, 0):"No reason given", sizeof(reason));
+		for (c = reason; *c; c++)
+			if (*c == '"' || *c == '\n' || *c == ';')
+				*c = ' ';
+		plugfuncs->EndGame("Server disconnected - %s", reason);
+		cmdfuncs->AddText(va("err_dialog \"%s\"\n", reason), false);
+#else
 		plugfuncs->EndGame("Server disconnected - %s", (cmdfuncs->Argc()>1)?cmdfuncs->Argv(1, NULL, 0):"No reason given");
+#endif
+	}
 	return true;
 }
 
@@ -967,6 +986,17 @@ static qintptr_t CG_SystemCalls(void *offset, quintptr_t mask, qintptr_t fn, con
 		else
 			VM_LONG(ret) = drawfuncs->LoadImage(VM_POINTER(arg[0]));
 		break;
+#ifdef HOLOMATCH
+	case CG_R_REGISTERSHADER3D:	//a shader for use in the 3d world (rather than the 2d one that RegisterShader gives), so no lightmap/2d-pic assumptions
+		if (!*(char*)VM_POINTER(arg[0]))
+			VM_LONG(ret) = 0;
+		else
+			VM_LONG(ret) = drawfuncs->LoadImageShader(VM_POINTER(arg[0]), NULL);
+		break;
+	case CG_CVAR_SET_NO_MODIFY:
+		cvarfuncs->SetString(VM_POINTER(arg[0]), VM_POINTER(arg[1])?VM_POINTER(arg[1]):"");
+		break;
+#endif
 	case CG_R_REGISTERSHADERNOMIP:
 		if (!*(char*)VM_POINTER(arg[0]))
 			VM_LONG(ret) = 0;
@@ -1066,6 +1096,13 @@ static qintptr_t CG_SystemCalls(void *offset, quintptr_t mask, qintptr_t fn, con
 		break;
 
 	case CG_S_STARTBACKGROUNDTRACK:
+#ifdef HOLOMATCH	//Elite Force has no separate stop trap, it passes an empty name instead.
+		if (!VM_POINTER(arg[0]) || !*(char*)VM_POINTER(arg[0]))
+		{
+			audiofuncs->ChangeMusicTrack(NULL, NULL);
+			return 0;
+		}
+#endif
 		audiofuncs->ChangeMusicTrack(VM_POINTER(arg[0]), VM_POINTER(arg[1]));
 		return 0;
 	case CG_S_STOPBACKGROUNDTRACK:
@@ -1363,11 +1400,12 @@ void CG_Stop (void)
 	Q3_SetKeyCatcher(Q3_GetKeyCatcher()&~2);
 	if (cgvm)
 	{
-		vmfuncs->Call(cgvm, CG_SHUTDOWN);
-		vmfuncs->Destroy(cgvm);
-		VM_fcloseall(1);
+		//clear the global first: CG_SHUTDOWN (or an error while disconnecting) may end up back in here.
+		vm_t *vm = cgvm;
 		cgvm = NULL;
-
+		vmfuncs->Call(vm, CG_SHUTDOWN);
+		vmfuncs->Destroy(vm);
+		VM_fcloseall(1);
 	}
 }
 
@@ -1423,6 +1461,9 @@ qboolean CG_KeyPressed(int key, int unicode, int down)
 
 	if (!cgvm || !(Q3_GetKeyCatcher()&8))
 		return false;
+#ifdef HOLOMATCH
+	return false;	//Elite Force's cgame has no key handler export.
+#endif
 
 	/* if you change this here, it'll have to be changed in cl_cg.c too */
 	switch (key)

@@ -816,6 +816,19 @@ void MSG_Q3_WriteDeltaUsercmd( sizebuf_t *msg, int key, const usercmd_t *from, c
 		msgfuncs->WriteBits( msg, to->servertime, 32);
 	}
 
+#ifdef HOLOMATCH
+	//Elite Force: no checksum key, no 'nothing changed' bit, 8-bit buttons.
+	(void)key;
+	MSG_WriteDeltaKey(msg, 0, from->angles[0],		to->angles[0],		16);
+	MSG_WriteDeltaKey(msg, 0, from->angles[1],		to->angles[1],		16);
+	MSG_WriteDeltaKey(msg, 0, from->angles[2],		to->angles[2],		16);
+	MSG_WriteDeltaKey(msg, 0, from->forwardmove,	to->forwardmove,	 8);
+	MSG_WriteDeltaKey(msg, 0, from->sidemove,		to->sidemove,		 8);
+	MSG_WriteDeltaKey(msg, 0, from->upmove,			to->upmove,			 8);
+	MSG_WriteDeltaKey(msg, 0, from->buttons,		to->buttons,		 8);
+	MSG_WriteDeltaKey(msg, 0, from->weapon,			to->weapon,			 8);
+	return;
+#endif
 	if( !memcmp( (qbyte *)from + 4, (qbyte *)to + 4, sizeof( usercmd_t ) - 4 ) )
 	{
 		msgfuncs->WriteBits(msg, 0, 1);
@@ -1048,6 +1061,9 @@ void CLQ3_Established(void)
 void CLQ3_Disconnect(struct ftenet_connections_s *socket)
 {
 	ccs.state = ca_disconnected;
+	//the cgame must not outlive the connection. Without this, an error raised from inside a cgame trap (Host_EndGame longjmps out
+	//of the vm, leaking its stack) leaves the cgame running without a map, failing again on every frame until the vm runs out of stack.
+	CG_Stop();
 }
 #endif
 
